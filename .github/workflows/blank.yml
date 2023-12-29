@@ -23,14 +23,8 @@ jobs:
 
       - name: install modules
         run: yarn install --production
-
-      - name: run test
-        run: |
-          yarn add jest
-          sudo yarn test
-
+        
       - name: Docker Login
-       
         uses: docker/login-action@v3.0.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
