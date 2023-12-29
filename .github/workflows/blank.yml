@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  CI:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,3 +42,24 @@ jobs:
           docker build -t gdsc .
           docker tag gdsc:latest $/gdsc:latest
           docker push synoti21/gdsc:latest
+
+  CD:
+      needs: CI
+      runs-on: ubuntu-latest
+  
+      steps:
+        - name: Deploy to EC2 / Check bot status
+          uses: appleboy/ssh-action@v1.0.0
+          with:
+            host: ${{ secrets.EC2_HOST }}
+            username: ${{ secrets.EC2_USERNAME }}
+            key: ${{ secrets.EC2_KEY }}
+  
+            script: |
+              echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+              sudo docker rm $(sudo docker stop $(sudo docker ps -a -q --filter ancestor=synoti21/gdsc:latest --format="{{.ID}}"))
+              sudo docker rmi synoti21/gdsc:latest
+              sudo docker pull synoti21/gdsc:latest
+              sudo docker run -d --name gdsc-cicd ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.PROJECT_NAME }}:latest
+              sleep 10s
+              sudo docker ps | grep synoti21/gdsc:latest
